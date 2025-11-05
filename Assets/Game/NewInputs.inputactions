@@ -1,0 +1,34 @@
+{
+    "name": "NewInputs",
+    "maps": [
+        {
+            "name": "movearound",
+            "id": "dd8592f9-12c6-4844-b84c-64d8c2845411",
+            "actions": [
+                {
+                    "name": "MobaInputActions",
+                    "type": "Button",
+                    "id": "8a7b4108-bdf5-4731-89b9-2a9831464d9e",
+                    "expectedControlType": "Button",
+                    "processors": "",
+                    "interactions": "",
+                    "initialStateCheck": false
+                }
+            ],
+            "bindings": [
+                {
+                    "name": "",
+                    "id": "783d0538-7997-4e78-9484-7336291dbe56",
+                    "path": "",
+                    "interactions": "",
+                    "processors": "",
+                    "groups": "",
+                    "action": "MobaInputActions",
+                    "isComposite": false,
+                    "isPartOfComposite": false
+                }
+            ]
+        }
+    ],
+    "controlSchemes": []
+}
