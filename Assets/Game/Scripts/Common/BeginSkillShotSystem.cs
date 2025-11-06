@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using Unity.Collections;
 using Unity.Entities;
 using Unity.NetCode;
+using Unity.Transforms;
 using UnityEngine;
 
 [UpdateInGroup(typeof(PredictedSimulationSystemGroup))]
@@ -56,6 +57,15 @@ public partial struct BeginSkillShotSystem : ISystem
                 }
 
                 ecb.AddComponent<AimSkillShotTag>(skillShot.ChampionEntity);
+
+                if (isServer || !SystemAPI.HasComponent<OwnerChampTag>(skillShot.ChampionEntity))
+                {
+                    continue;
+                }
+
+                var skillShotUIPrefab = SystemAPI.ManagedAPI.GetSingleton<UIPrefabs>().SkillShot;
+                var newSkillShotUI = Object.Instantiate(skillShotUIPrefab, skillShot.AttackPosition, Quaternion.identity);
+                ecb.AddComponent(skillShot.ChampionEntity, new SkillShotUIReference { Value = newSkillShotUI });
             }
         }
 
@@ -89,6 +99,24 @@ public partial struct BeginSkillShotSystem : ISystem
             curTargetTicks.Tick = nextTick;
 
             skillShot.CooldownTargetTicks.AddCommandData(curTargetTicks);
+        }
+
+        foreach (var (abilityInput, skillShotUIReference, entity)
+            in SystemAPI.Query<AbilityInput, SkillShotUIReference>().WithAll<Simulate>().WithEntityAccess())
+        {
+            if (!abilityInput.ConfirmSkillShotAbility.IsSet)
+            {
+                continue;
+            }
+            Object.Destroy(skillShotUIReference.Value);
+            ecb.RemoveComponent<SkillShotUIReference>(entity);
+        }
+
+        foreach (var (skillShotUIReference, entity)
+            in SystemAPI.Query<SkillShotUIReference>().WithAll<Simulate>().WithNone<LocalTransform>().WithEntityAccess())
+        {
+            Object.Destroy(skillShotUIReference.Value);
+            ecb.RemoveComponent<SkillShotUIReference>(entity);
         }
 
         ecb.Playback(state.EntityManager);

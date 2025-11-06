@@ -39,6 +39,18 @@ public partial struct AbilityCooldownUISystem : ISystem
                 var fillAmount = (float)aoeRemainTickCount / abilityCooldownTicks.AoeAbility;
                 abilityCooldownUIController.UpdateAoeMask(fillAmount);
             }
+
+            if (curTargetTicks.SkillShotAbility == NetworkTick.Invalid ||
+                currentTick.IsNewerThan(curTargetTicks.SkillShotAbility))
+            {
+                abilityCooldownUIController.UpdateSkillShotMask(0f);
+            }
+            else
+            {
+                var SkillShotRemainTickCount = curTargetTicks.SkillShotAbility.TickIndexForValidTick - currentTick.TickIndexForValidTick;
+                var fillAmount = (float)SkillShotRemainTickCount / abilityCooldownTicks.SkillShotAbility;
+                abilityCooldownUIController.UpdateAoeMask(fillAmount);
+            }
         }
     }
 }

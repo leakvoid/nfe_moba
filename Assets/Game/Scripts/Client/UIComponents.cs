@@ -1,4 +1,5 @@
 using Unity.Entities;
+using Unity.Entities.UniversalDelegates;
 using Unity.Mathematics;
 using UnityEngine;
 
@@ -10,4 +11,9 @@ public class HealthBarUIReference : ICleanupComponentData
 public struct HealthBarOffset : IComponentData
 {
     public float3 Value;
+}
+
+public class SkillShotUIReference : ICleanupComponentData
+{
+    public GameObject Value;
 }

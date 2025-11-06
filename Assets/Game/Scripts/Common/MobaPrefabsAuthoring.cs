@@ -7,9 +7,11 @@ public class MobaPrefabsAuthoring : MonoBehaviour
 {
     [Header("Entities")]
     public GameObject ChampionPrefab;
+    public GameObject MinionPrefab;
 
     [Header("GameObject")]
     public GameObject HealthBarPrefab;
+    public GameObject SkillShotAimPrefab;
 
     public class Baker : Baker<MobaPrefabsAuthoring>
     {
@@ -19,11 +21,13 @@ public class MobaPrefabsAuthoring : MonoBehaviour
             AddComponent(prefabContainerEntity, new MobaPrefabs
             {
                 Champion = GetEntity(authoring.ChampionPrefab, TransformUsageFlags.Dynamic),
+                Minion = GetEntity(authoring.MinionPrefab, TransformUsageFlags.Dynamic)
             });
 
             AddComponentObject(prefabContainerEntity, new UIPrefabs
             {
-                HealthBar = authoring.HealthBarPrefab
+                HealthBar = authoring.HealthBarPrefab,
+                SkillShot = authoring.SkillShotAimPrefab
             });
         }
     }
