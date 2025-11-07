@@ -1,5 +1,7 @@
 using System.Collections;
 using System.Collections.Generic;
+using System.Xml.Schema;
+using Common;
 using Unity.Entities;
 using Unity.Mathematics;
 using Unity.NetCode;
@@ -32,6 +34,35 @@ public partial struct DestroyEntitySystem : ISystem
         {
             if (state.World.IsServer())
             {
+                if (SystemAPI.HasComponent<GameOverOnDestroyTag>(entity))
+                {
+                    var gameOverPrefab = SystemAPI.GetSingleton<MobaPrefabs>().GameOverEntity;
+                    var gameOverEntity = ecb.Instantiate(gameOverPrefab);
+
+                    var losing = SystemAPI.GetComponent<MobaTeam>(entity).Value;
+                    var winning = losing == Common.TeamType.Blue ? TeamType.Red : TeamType.Blue;
+                    Debug.Log(winning.ToString() + " Team Won!");
+
+                    ecb.SetComponent(gameOverEntity, new WinningTeam { Value = winning });
+                }
+
+                if (SystemAPI.HasComponent<ChampTag>(entity))
+                {
+                    var networkEntity = SystemAPI.GetComponent<NetworkEntityReference>(entity).Value;
+                    var respawnEntity = SystemAPI.GetSingletonEntity<RespawnEntityTag>();
+                    var respawnTickCount = SystemAPI.GetComponent<RespawnTickCount>(respawnEntity).Value;
+
+                    var respawnTick = currentTick;
+                    respawnTick.Add(respawnTickCount);
+
+                    ecb.AppendToBuffer(respawnEntity, new RespawnBufferElement
+                    {
+                        NetworkEntity = networkEntity,
+                        RespawnTick = respawnTick,
+                        NetworkId = SystemAPI.GetComponent<NetworkId>(networkEntity).Value
+                    });
+                }
+
                 ecb.DestroyEntity(entity);
             }
             else

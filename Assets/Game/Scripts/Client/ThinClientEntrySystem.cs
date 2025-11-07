@@ -1,0 +1,38 @@
+using System.Collections;
+using System.Collections.Generic;
+using Common;
+using TMG.NFE_Tutorial;
+using Unity.Entities;
+using Unity.NetCode;
+using Unity.Mathematics;
+
+[WorldSystemFilter(WorldSystemFilterFlags.ThinClientSimulation)]
+public partial struct ThinClientEntrySystem : ISystem
+{
+    public void OnUpdate(ref SystemState state)
+    {
+        state.Enabled = false; // ONE TIME SYSTEM RUN
+
+        var thinClientDummy = state.EntityManager.CreateEntity();
+        state.EntityManager.AddComponent<ChampMoveTargetPosition>(thinClientDummy);
+        state.EntityManager.AddBuffer<InputBufferData<ChampMoveTargetPosition>>(thinClientDummy);
+
+        var connectionEntity = SystemAPI.GetSingletonEntity<NetworkId>();
+        SystemAPI.SetComponent(connectionEntity, new CommandTarget { targetEntity = thinClientDummy });
+        var connectionId = SystemAPI.GetSingleton<NetworkId>().Value;
+        state.EntityManager.AddComponentData(thinClientDummy, new GhostOwner { NetworkId = connectionId });
+
+        var thinClientRequestEntity = state.EntityManager.CreateEntity();
+        state.EntityManager.AddComponentData(thinClientRequestEntity, new ClientTeamRequest { Value = TeamType.AutoAssign });
+
+        state.EntityManager.AddComponentData(thinClientDummy, new ThinClientInputProperties
+        {
+            Random = Random.CreateFromIndex((uint)connectionId),
+            Timer = 0f,
+            MinTimer = 1f,
+            MaxTimer = 10f,
+            MinPosition = new float3(-50f, 0, -50f),
+            MaxPosition = new float3(50f, 0, 50f)
+        });
+    }
+}

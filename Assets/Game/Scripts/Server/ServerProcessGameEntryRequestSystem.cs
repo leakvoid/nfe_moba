@@ -13,7 +13,9 @@ namespace TMG.NFE_Tutorial
     {
         public void OnCreate(ref SystemState state)
         {
+            state.RequireForUpdate<GameStartProperties>();
             state.RequireForUpdate<MobaPrefabs>();
+            state.RequireForUpdate<NetworkTime>();
 
             var builder = new EntityQueryBuilder(Allocator.Temp).WithAll<MobaTeamRequest, ReceiveRpcCommandRequest>();
             state.RequireForUpdate(state.GetEntityQuery(builder));
@@ -24,6 +26,11 @@ namespace TMG.NFE_Tutorial
             var ecb = new EntityCommandBuffer(Allocator.Temp);
 
             var championPrefab = SystemAPI.GetSingleton<MobaPrefabs>().Champion;
+
+            var gamePropertyEntity = SystemAPI.GetSingletonEntity<GameStartProperties>();
+            var gameStartProperties = SystemAPI.GetComponent<GameStartProperties>(gamePropertyEntity);
+            var teamPlayerCounter = SystemAPI.GetComponent<TeamPlayerCounter>(gamePropertyEntity);
+            var spawnOffsets = SystemAPI.GetBuffer<SpawnOffset>(gamePropertyEntity);
 
             foreach (var (teamRequest, requestSource, requestEntity) in
                 SystemAPI.Query<MobaTeamRequest, ReceiveRpcCommandRequest>().WithEntityAccess())
@@ -49,10 +56,23 @@ namespace TMG.NFE_Tutorial
                 switch (requestedTeamType)
                 {
                     case Common.TeamType.Blue:
+                        if (teamPlayerCounter.BlueTeamPlayers >= gameStartProperties.MaxPlayersPerTeam)
+                        {
+                            Debug.Log($"Blue team is full. Client ID: {clientId} is spectating the game");
+                        }
                         spawnPosition = new float3(-50f, 1f, -50f);
+                        spawnPosition += spawnOffsets[teamPlayerCounter.BlueTeamPlayers].Value;
+                        teamPlayerCounter.BlueTeamPlayers++;
                         break;
                     case Common.TeamType.Red:
+                        
+                        if (teamPlayerCounter.RedTeamPlayers >= gameStartProperties.MaxPlayersPerTeam)
+                        {
+                            Debug.Log($"Red team is full. Client ID: {clientId} is spectating the game");
+                        }
                         spawnPosition = new float3(50f, 1f, 50f);
+                        spawnPosition += spawnOffsets[teamPlayerCounter.RedTeamPlayers].Value;
+                        teamPlayerCounter.RedTeamPlayers++;
                         break;
                     default:
                         continue;
@@ -64,9 +84,47 @@ namespace TMG.NFE_Tutorial
                 ecb.SetComponent(newChamp, new MobaTeam { Value = requestedTeamType });
 
                 ecb.AppendToBuffer(requestSource.SourceConnection, new LinkedEntityGroup { Value = newChamp });
+
+                ecb.SetComponent(newChamp, new NetworkEntityReference { Value = requestSource.SourceConnection });
+
+                ecb.AddComponent(requestSource.SourceConnection, new PlayerSpawnInfo
+                {
+                    MobaTeam = requestedTeamType,
+                    SpawnPosition = spawnPosition
+                });
+
+                ecb.SetComponent(requestSource.SourceConnection, new CommandTarget { targetEntity = newChamp });
+
+                var playersRemainingToStart = gameStartProperties.MinPlayersToStartGame - teamPlayerCounter.TotalPlayers;
+
+                var gameStartRpc = ecb.CreateEntity();
+                if (playersRemainingToStart <= 0 && !SystemAPI.HasSingleton<GamePlayingTag>())
+                {
+                    var simulationTickRate = NetCodeConfig.Global.ClientServerTickRate.SimulationTickRate;
+                    var ticksUntilStart = (uint)(simulationTickRate * gameStartProperties.CountdownTime);
+                    var gameStartTick = SystemAPI.GetSingleton<NetworkTime>().ServerTick;
+                    gameStartTick.Add(ticksUntilStart);
+
+                    ecb.AddComponent(gameStartRpc, new GameStartTickRpc
+                    {
+                        Value = gameStartTick
+                    });
+
+                    var gameStartEntity = ecb.CreateEntity();
+                    ecb.AddComponent(gameStartEntity, new GameStartTick
+                    {
+                        Value = gameStartTick
+                    });
+                }
+                else
+                {
+                    ecb.AddComponent(gameStartRpc, new PlayersRemainingToStart { Value = playersRemainingToStart });
+                }
+                ecb.AddComponent<SendRpcCommandRequest>(gameStartRpc);
             }
 
             ecb.Playback(state.EntityManager);
+            SystemAPI.SetSingleton(teamPlayerCounter);
         }
     }
 }
