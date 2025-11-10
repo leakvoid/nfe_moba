@@ -25,6 +25,17 @@ public partial struct ThinClientInputSystem : ISystem
             moveTargetPosition.ValueRW.Value = randomPosition;
 
             inputProperties.ValueRW.Timer = inputProperties.ValueRW.Random.NextFloat(inputProperties.ValueRO.MinTimer, inputProperties.ValueRO.MaxTimer);
+
+            // inputProperties.ValueRW.Timer -= deltaTime;
+            // if (inputProperties.ValueRO.Timer > 0f)
+            // {
+            //     continue;
+            // }
+
+            // var randomPosition = inputProperties.ValueRW.Random.NextFloat3(inputProperties.ValueRO.MinPosition, inputProperties.ValueRO.MaxPosition);
+            // moveTargetPosition.ValueRW.Value = randomPosition;
+
+            // inputProperties.ValueRW.Timer = inputProperties.ValueRW.Random.NextFloat(inputProperties.ValueRO.MinTimer, inputProperties.ValueRO.MaxTimer);
         }
     }
 }
